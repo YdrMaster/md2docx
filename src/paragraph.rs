@@ -1,5 +1,5 @@
 ﻿use crate::{
-    text::{from_emphasis, from_inline_code, from_strong, from_text},
+    text::{from_emphasis, from_strong, Text},
     BuildError,
 };
 use docx_rs::Paragraph;
@@ -9,8 +9,8 @@ pub fn from_paragraph(paragraph: mdast::Paragraph) -> Result<Paragraph, BuildErr
     let mut p = Paragraph::new();
     for node in paragraph.children {
         p = match node {
-            Ast::Text(text) => p.add_run(from_text(text).into_run()),
-            Ast::InlineCode(inline_code) => p.add_run(from_inline_code(inline_code).into_run()),
+            Ast::Text(text) => p.add_run(Text::from(text).into_run()),
+            Ast::InlineCode(inline_code) => p.add_run(Text::from(inline_code).into_run()),
             Ast::Strong(strong) => from_strong(strong)
                 .into_iter()
                 .fold(p, |p, text| p.add_run(text.into_run())),
@@ -18,7 +18,6 @@ pub fn from_paragraph(paragraph: mdast::Paragraph) -> Result<Paragraph, BuildErr
                 .into_iter()
                 .fold(p, |p, text| p.add_run(text.into_run())),
 
-            Ast::BlockQuote(_) => todo!(),
             Ast::FootnoteDefinition(_) => todo!(),
             Ast::MdxJsxFlowElement(_) => todo!(),
             Ast::List(_) => todo!(),
@@ -36,16 +35,17 @@ pub fn from_paragraph(paragraph: mdast::Paragraph) -> Result<Paragraph, BuildErr
             Ast::MdxJsxTextElement(_) => todo!(),
             Ast::Link(_) => todo!(),
             Ast::LinkReference(_) => todo!(),
-            Ast::Code(_) => todo!(),
-            Ast::Math(_) => todo!(),
             Ast::MdxFlowExpression(_) => todo!(),
             Ast::ListItem(_) => todo!(),
             Ast::Definition(_) => todo!(),
 
             Ast::Paragraph(_)
             | Ast::Root(_)
-            | Ast::ThematicBreak(_)
+            | Ast::BlockQuote(_)
+            | Ast::Code(_)
+            | Ast::Math(_)
             | Ast::Heading(_)
+            | Ast::ThematicBreak(_)
             | Ast::Table(_)
             | Ast::TableRow(_)
             | Ast::TableCell(_) => unreachable!(),

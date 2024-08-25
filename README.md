@@ -40,6 +40,7 @@ plaintext
 ```
 
 > **NOTICE** This is a table ↓
+
  Title 1 | Title 2 | Title 3
 ---------|--------:|:-------:
  Item1:1 | Item1:2 | Item1:3
@@ -47,7 +48,7 @@ plaintext
  Item3:1 | Item3:2 | Item3:3
 
 ## 依赖项
->
+
 > ref: [markdown-1.0](https://crates.io/crates/markdown/1.0.0-alpha.20)
 >
 > Multilines quote

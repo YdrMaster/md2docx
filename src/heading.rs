@@ -1,6 +1,6 @@
 ﻿use crate::{
-    style::heading_style_id,
-    text::{from_emphasis, from_inline_code, from_strong, from_text},
+    style::heading_style,
+    text::{from_emphasis, from_strong, Text},
     BuildError,
 };
 use docx_rs::Paragraph;
@@ -10,8 +10,8 @@ pub fn from_heading(heading: Heading) -> Result<Paragraph, BuildError> {
     let mut p = Paragraph::new();
     for node in heading.children {
         p = match node {
-            Ast::Text(text) => p.add_run(from_text(text).into_run()),
-            Ast::InlineCode(inline_code) => p.add_run(from_inline_code(inline_code).into_run()),
+            Ast::Text(text) => p.add_run(Text::from(text).into_run()),
+            Ast::InlineCode(inline_code) => p.add_run(Text::from(inline_code).into_run()),
             Ast::Strong(strong) => from_strong(strong)
                 .into_iter()
                 .fold(p, |p, text| p.add_run(text.into_run())),
@@ -19,7 +19,6 @@ pub fn from_heading(heading: Heading) -> Result<Paragraph, BuildError> {
                 .into_iter()
                 .fold(p, |p, text| p.add_run(text.into_run())),
 
-            Ast::BlockQuote(_) => todo!(),
             Ast::FootnoteDefinition(_) => todo!(),
             Ast::MdxJsxFlowElement(_) => todo!(),
             Ast::List(_) => todo!(),
@@ -39,18 +38,19 @@ pub fn from_heading(heading: Heading) -> Result<Paragraph, BuildError> {
             Ast::MdxFlowExpression(_) => todo!(),
             Ast::ListItem(_) => todo!(),
             Ast::Definition(_) => todo!(),
-            Ast::Paragraph(_) => todo!(),
 
             Ast::Heading(_)
             | Ast::Root(_)
-            | Ast::ThematicBreak(_)
+            | Ast::Paragraph(_)
+            | Ast::BlockQuote(_)
             | Ast::Code(_)
             | Ast::Math(_)
             | Ast::Image(_)
+            | Ast::ThematicBreak(_)
             | Ast::Table(_)
             | Ast::TableRow(_)
             | Ast::TableCell(_) => unreachable!(),
         };
     }
-    Ok(p.style(&heading_style_id(heading.depth)))
+    Ok(heading_style(p, heading.depth))
 }

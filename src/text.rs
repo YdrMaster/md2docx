@@ -1,61 +1,83 @@
-﻿use crate::style::INLINE_CODE_STYLE_ID;
+﻿use crate::style::inline_code_style;
 use docx_rs::Run;
 use markdown::mdast::{self, Emphasis, Node as Ast, Strong};
 
-pub enum Text {
-    Normal(String),
-    Strong(String),
-    Emphasis(String),
-    StrongEmphasis(String),
-    InlineCode(String),
+pub struct Text {
+    style: TextStyle,
+    content: String,
+}
+
+enum TextStyle {
+    Normal,
+    Strong,
+    Emphasis,
+    StrongEmphasis,
+    InlineCode,
 }
 
 impl Text {
     pub fn strong(self) -> Self {
-        match self {
-            Self::Normal(text) => Self::Strong(text),
-            Self::Strong(text) => Self::Strong(text),
-            Self::Emphasis(text) => Self::StrongEmphasis(text),
-            Self::StrongEmphasis(text) => Self::StrongEmphasis(text),
-            Self::InlineCode(text) => Self::InlineCode(text),
+        Self {
+            style: match self.style {
+                TextStyle::Normal => TextStyle::Strong,
+                TextStyle::Strong => TextStyle::Strong,
+                TextStyle::Emphasis => TextStyle::StrongEmphasis,
+                TextStyle::StrongEmphasis => TextStyle::StrongEmphasis,
+                TextStyle::InlineCode => TextStyle::InlineCode,
+            },
+            content: self.content,
         }
     }
 
     pub fn emphasis(self) -> Self {
-        match self {
-            Self::Normal(text) => Self::Emphasis(text),
-            Self::Strong(text) => Self::StrongEmphasis(text),
-            Self::Emphasis(text) => Self::Emphasis(text),
-            Self::StrongEmphasis(text) => Self::StrongEmphasis(text),
-            Self::InlineCode(text) => Self::InlineCode(text),
+        Self {
+            style: match self.style {
+                TextStyle::Normal => TextStyle::Emphasis,
+                TextStyle::Strong => TextStyle::StrongEmphasis,
+                TextStyle::Emphasis => TextStyle::Emphasis,
+                TextStyle::StrongEmphasis => TextStyle::StrongEmphasis,
+                TextStyle::InlineCode => TextStyle::InlineCode,
+            },
+            content: self.content,
         }
     }
 
     pub fn into_run(self) -> Run {
-        match self {
-            Self::Normal(text) => Run::new().add_text(text),
-            Self::Strong(text) => Run::new().add_text(text).bold(),
-            Self::Emphasis(text) => Run::new().add_text(text).italic(),
-            Self::StrongEmphasis(text) => Run::new().add_text(text).bold().italic(),
-            Self::InlineCode(text) => Run::new().add_text(text).style(INLINE_CODE_STYLE_ID),
+        let run = Run::new().add_text(self.content);
+        match self.style {
+            TextStyle::Normal => run,
+            TextStyle::Strong => run.bold(),
+            TextStyle::Emphasis => run.italic(),
+            TextStyle::StrongEmphasis => run.bold().italic(),
+            TextStyle::InlineCode => inline_code_style(run),
         }
     }
 }
 
-pub fn from_text(text: mdast::Text) -> Text {
-    Text::Normal(text.value)
+impl From<mdast::Text> for Text {
+    fn from(value: mdast::Text) -> Self {
+        Self {
+            style: TextStyle::Normal,
+            content: value.value,
+        }
+    }
 }
 
-pub fn from_inline_code(inline_code: mdast::InlineCode) -> Text {
-    Text::InlineCode(inline_code.value)
+impl From<mdast::InlineCode> for Text {
+    fn from(value: mdast::InlineCode) -> Self {
+        Self {
+            style: TextStyle::InlineCode,
+            content: value.value,
+        }
+    }
 }
 
 pub fn from_strong(strong: Strong) -> Vec<Text> {
     let mut ans = Vec::new();
     for node in strong.children {
         match node {
-            Ast::Text(text) => ans.push(from_text(text).strong()),
-            Ast::InlineCode(inline_code) => ans.push(from_inline_code(inline_code).strong()),
+            Ast::Text(text) => ans.push(Text::from(text).strong()),
+            Ast::InlineCode(inline_code) => ans.push(Text::from(inline_code).strong()),
             Ast::Emphasis(emphasis) => {
                 ans.extend(from_emphasis(emphasis).into_iter().map(|t| t.strong()))
             }
@@ -101,8 +123,8 @@ pub fn from_emphasis(strong: Emphasis) -> Vec<Text> {
     let mut ans = Vec::new();
     for node in strong.children {
         match node {
-            Ast::Text(text) => ans.push(from_text(text).emphasis()),
-            Ast::InlineCode(inline_code) => ans.push(from_inline_code(inline_code).emphasis()),
+            Ast::Text(text) => ans.push(Text::from(text).emphasis()),
+            Ast::InlineCode(inline_code) => ans.push(Text::from(inline_code).emphasis()),
             Ast::Strong(strong) => {
                 ans.extend(from_strong(strong).into_iter().map(|t| t.emphasis()))
             }
