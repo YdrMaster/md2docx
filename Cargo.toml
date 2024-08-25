@@ -1,0 +1,9 @@
+[package]
+name = "md2docx"
+version = "0.0.0"
+edition = "2021"
+authors = ["YdrMaster <ydrml@hotmail.com>"]
+
+[dependencies]
+markdown = "=1.0.0-alpha.20"
+docx-rs = "0.4"
