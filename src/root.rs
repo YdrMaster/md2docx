@@ -1,4 +1,4 @@
-﻿use crate::{heading::from_heading, paragraph::from_paragraph};
+﻿use crate::{heading::from_heading, list::from_list, paragraph::from_paragraph};
 use docx_rs::Docx;
 use markdown::mdast::{Node as Ast, Root};
 
@@ -8,40 +8,41 @@ pub fn from_root(root: Root) -> Docx {
         docx = match node {
             Ast::Heading(heading) => docx.add_paragraph(from_heading(heading)),
             Ast::Paragraph(paragraph) => docx.add_paragraph(from_paragraph(paragraph)),
+            Ast::List(list) => from_list(list)
+                .into_iter()
+                .fold(docx, |docx, p| docx.add_paragraph(p)),
 
-            Ast::BlockQuote(_) => todo!(),
-            Ast::FootnoteDefinition(_) => todo!(),
-            Ast::MdxJsxFlowElement(_) => todo!(),
-            Ast::List(_) => todo!(),
-            Ast::MdxjsEsm(_) => todo!(),
-            Ast::Toml(_) => todo!(),
-            Ast::Yaml(_) => todo!(),
-            Ast::Break(_) => todo!(),
-            Ast::InlineCode(_) => todo!(),
-            Ast::InlineMath(_) => todo!(),
-            Ast::Delete(_) => todo!(),
-            Ast::Emphasis(_) => todo!(),
-            Ast::MdxTextExpression(_) => todo!(),
-            Ast::FootnoteReference(_) => todo!(),
-            Ast::Html(_) => todo!(),
-            Ast::Image(_) => todo!(),
-            Ast::ImageReference(_) => todo!(),
-            Ast::MdxJsxTextElement(_) => todo!(),
-            Ast::Link(_) => todo!(),
-            Ast::LinkReference(_) => todo!(),
-            Ast::Strong(_) => todo!(),
-            Ast::Text(_) => todo!(),
-            Ast::Code(_) => todo!(),
-            Ast::Math(_) => todo!(),
-            Ast::MdxFlowExpression(_) => todo!(),
-            Ast::Table(_) => todo!(),
-            Ast::ThematicBreak(_) => todo!(),
-            Ast::TableRow(_) => todo!(),
-            Ast::TableCell(_) => todo!(),
-            Ast::ListItem(_) => todo!(),
-            Ast::Definition(_) => todo!(),
+            Ast::Root(_) | Ast::ListItem(_) => unreachable!(),
 
-            Ast::Root(_) => unreachable!(),
+            Ast::BlockQuote(_)
+            | Ast::FootnoteDefinition(_)
+            | Ast::MdxJsxFlowElement(_)
+            | Ast::MdxjsEsm(_)
+            | Ast::Toml(_)
+            | Ast::Yaml(_)
+            | Ast::Break(_)
+            | Ast::InlineCode(_)
+            | Ast::InlineMath(_)
+            | Ast::Delete(_)
+            | Ast::Emphasis(_)
+            | Ast::MdxTextExpression(_)
+            | Ast::FootnoteReference(_)
+            | Ast::Html(_)
+            | Ast::Image(_)
+            | Ast::ImageReference(_)
+            | Ast::MdxJsxTextElement(_)
+            | Ast::Link(_)
+            | Ast::LinkReference(_)
+            | Ast::Strong(_)
+            | Ast::Text(_)
+            | Ast::Code(_)
+            | Ast::Math(_)
+            | Ast::MdxFlowExpression(_)
+            | Ast::Table(_)
+            | Ast::ThematicBreak(_)
+            | Ast::TableRow(_)
+            | Ast::TableCell(_)
+            | Ast::Definition(_) => todo!(),
         }
     }
     docx

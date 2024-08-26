@@ -15,27 +15,6 @@ pub fn from_paragraph(paragraph: mdast::Paragraph) -> Paragraph {
                 .into_iter()
                 .fold(p, |p, text| p.add_run(text.into_run())),
 
-            Ast::FootnoteDefinition(_) => todo!(),
-            Ast::MdxJsxFlowElement(_) => todo!(),
-            Ast::List(_) => todo!(),
-            Ast::MdxjsEsm(_) => todo!(),
-            Ast::Toml(_) => todo!(),
-            Ast::Yaml(_) => todo!(),
-            Ast::Break(_) => todo!(),
-            Ast::InlineMath(_) => todo!(),
-            Ast::Delete(_) => todo!(),
-            Ast::MdxTextExpression(_) => todo!(),
-            Ast::FootnoteReference(_) => todo!(),
-            Ast::Html(_) => todo!(),
-            Ast::Image(_) => todo!(),
-            Ast::ImageReference(_) => todo!(),
-            Ast::MdxJsxTextElement(_) => todo!(),
-            Ast::Link(_) => todo!(),
-            Ast::LinkReference(_) => todo!(),
-            Ast::MdxFlowExpression(_) => todo!(),
-            Ast::ListItem(_) => todo!(),
-            Ast::Definition(_) => todo!(),
-
             Ast::Paragraph(_)
             | Ast::Root(_)
             | Ast::BlockQuote(_)
@@ -43,9 +22,30 @@ pub fn from_paragraph(paragraph: mdast::Paragraph) -> Paragraph {
             | Ast::Math(_)
             | Ast::Heading(_)
             | Ast::ThematicBreak(_)
+            | Ast::List(_)
+            | Ast::ListItem(_)
             | Ast::Table(_)
             | Ast::TableRow(_)
             | Ast::TableCell(_) => unreachable!(),
+
+            Ast::FootnoteDefinition(_)
+            | Ast::MdxJsxFlowElement(_)
+            | Ast::MdxjsEsm(_)
+            | Ast::Toml(_)
+            | Ast::Yaml(_)
+            | Ast::Break(_)
+            | Ast::InlineMath(_)
+            | Ast::Delete(_)
+            | Ast::MdxTextExpression(_)
+            | Ast::FootnoteReference(_)
+            | Ast::Html(_)
+            | Ast::Image(_)
+            | Ast::ImageReference(_)
+            | Ast::MdxJsxTextElement(_)
+            | Ast::Link(_)
+            | Ast::LinkReference(_)
+            | Ast::MdxFlowExpression(_)
+            | Ast::Definition(_) => todo!(),
         }
     }
     p

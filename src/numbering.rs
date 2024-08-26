@@ -6,6 +6,7 @@ use docx_rs::{
 
 const HEADING_NUMBERING: NumberingId = NumberingId { id: 1 };
 
+/// 为标题添加多级列表编号，`depth` in 1..=6
 pub fn heading_numbering(p: Paragraph, depth: u8) -> Paragraph {
     if let Some(depth) = depth.checked_sub(2) {
         p.numbering(HEADING_NUMBERING, IndentLevel::new(depth as _))

@@ -1,4 +1,5 @@
 mod heading;
+mod list;
 mod numbering;
 mod paragraph;
 mod root;
@@ -8,8 +9,9 @@ mod text;
 use markdown::{mdast::Node, to_mdast, ParseOptions};
 use numbering::add_numbering;
 use std::{
+    borrow::Cow,
     fs::{read_to_string, File},
-    path::{Path, PathBuf},
+    path::Path,
 };
 use style::add_style;
 
@@ -18,22 +20,32 @@ fn main() {
     let Ok(Node::Root(root)) = to_mdast(&readme, &ParseOptions::gfm()) else {
         panic!("Failed to parse markdown");
     };
-    // println!("{root:#?}");
+    println!("{root:#?}");
     let docx = root::from_root(root);
     let docx = add_style(docx);
     let docx = add_numbering(docx);
-    let name = Path::new("readme.docx");
-    let file = if !name.exists() {
-        File::create(name).unwrap()
-    } else {
-        let mut i = 1;
-        loop {
-            let name = PathBuf::from(format!("readme ({i}).docx"));
-            if !name.exists() {
-                break File::create(name).unwrap();
-            }
-            i += 1;
-        }
-    };
+    let name = find_available_name(Path::new("readme.docx"));
+    let file = File::create(name).unwrap();
     docx.build().pack(file).unwrap();
+}
+
+fn find_available_name(name: &Path) -> Cow<Path> {
+    if !name.exists() {
+        return name.into();
+    }
+    let dir = name.parent().unwrap();
+    let name = name
+        .file_name()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .strip_suffix(".docx")
+        .unwrap();
+    for i in 1.. {
+        let name = dir.join(format!("{name} ({i}).docx"));
+        if !name.exists() {
+            return name.into();
+        }
+    }
+    unreachable!()
 }
