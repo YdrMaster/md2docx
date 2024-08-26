@@ -52,3 +52,7 @@ plaintext
 > ref: [markdown-1.0](https://crates.io/crates/markdown/1.0.0-alpha.20)
 >
 > Multilines quote
+
+## 参考资料
+
+- [多级列表格式](https://learn.microsoft.com/zh-cn/dotnet/api/documentformat.openxml.wordprocessing.numberformatvalues)

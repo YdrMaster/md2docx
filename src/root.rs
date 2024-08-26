@@ -1,13 +1,13 @@
-﻿use crate::{heading::from_heading, paragraph::from_paragraph, BuildError};
+﻿use crate::{heading::from_heading, paragraph::from_paragraph};
 use docx_rs::Docx;
 use markdown::mdast::{Node as Ast, Root};
 
-pub fn from_root(root: Root) -> Result<Docx, BuildError> {
+pub fn from_root(root: Root) -> Docx {
     let mut docx = Docx::new();
     for node in root.children {
         docx = match node {
-            Ast::Heading(heading) => docx.add_paragraph(from_heading(heading)?),
-            Ast::Paragraph(paragraph) => docx.add_paragraph(from_paragraph(paragraph)?),
+            Ast::Heading(heading) => docx.add_paragraph(from_heading(heading)),
+            Ast::Paragraph(paragraph) => docx.add_paragraph(from_paragraph(paragraph)),
 
             Ast::BlockQuote(_) => todo!(),
             Ast::FootnoteDefinition(_) => todo!(),
@@ -44,5 +44,5 @@ pub fn from_root(root: Root) -> Result<Docx, BuildError> {
             Ast::Root(_) => unreachable!(),
         }
     }
-    Ok(docx)
+    docx
 }

@@ -1,14 +1,22 @@
 ﻿use crate::{
+    numbering::heading_numbering,
     style::heading_style,
     text::{from_emphasis, from_strong, Text},
-    BuildError,
 };
 use docx_rs::Paragraph;
 use markdown::mdast::{Heading, Node as Ast};
+use std::sync::atomic::{AtomicU8, Ordering::Relaxed};
 
-pub fn from_heading(heading: Heading) -> Result<Paragraph, BuildError> {
+static MAX_HEADING_DEPTH: AtomicU8 = AtomicU8::new(0);
+
+pub fn from_heading(heading: Heading) -> Paragraph {
+    let Heading {
+        depth, children, ..
+    } = heading;
+    MAX_HEADING_DEPTH.fetch_max(depth, Relaxed);
+
     let mut p = Paragraph::new();
-    for node in heading.children {
+    for node in children {
         p = match node {
             Ast::Text(text) => p.add_run(Text::from(text).into_run()),
             Ast::InlineCode(inline_code) => p.add_run(Text::from(inline_code).into_run()),
@@ -52,5 +60,11 @@ pub fn from_heading(heading: Heading) -> Result<Paragraph, BuildError> {
             | Ast::TableCell(_) => unreachable!(),
         };
     }
-    Ok(heading_style(p, heading.depth))
+    p = heading_style(p, depth);
+    p = heading_numbering(p, depth);
+    p
+}
+
+pub fn max_heading_depth() -> usize {
+    MAX_HEADING_DEPTH.load(Relaxed) as _
 }

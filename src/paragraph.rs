@@ -1,11 +1,8 @@
-﻿use crate::{
-    text::{from_emphasis, from_strong, Text},
-    BuildError,
-};
+﻿use crate::text::{from_emphasis, from_strong, Text};
 use docx_rs::Paragraph;
 use markdown::mdast::{self, Node as Ast};
 
-pub fn from_paragraph(paragraph: mdast::Paragraph) -> Result<Paragraph, BuildError> {
+pub fn from_paragraph(paragraph: mdast::Paragraph) -> Paragraph {
     let mut p = Paragraph::new();
     for node in paragraph.children {
         p = match node {
@@ -51,5 +48,5 @@ pub fn from_paragraph(paragraph: mdast::Paragraph) -> Result<Paragraph, BuildErr
             | Ast::TableCell(_) => unreachable!(),
         }
     }
-    Ok(p)
+    p
 }
