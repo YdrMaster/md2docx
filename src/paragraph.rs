@@ -1,52 +1,35 @@
-﻿use crate::text::{from_emphasis, from_strong, Text};
-use docx_rs::Paragraph;
-use markdown::mdast::{self, Node as Ast};
+﻿use crate::{
+    docx, md, numbering::heading_numbering, style::heading_style, text::to_paragraph_children,
+};
+use std::sync::atomic::{AtomicU8, Ordering::Relaxed};
 
-pub fn from_paragraph(paragraph: mdast::Paragraph) -> Paragraph {
-    let mut p = Paragraph::new();
-    for node in paragraph.children {
-        p = match node {
-            Ast::Text(text) => p.add_run(Text::from(text).into_run()),
-            Ast::InlineCode(inline_code) => p.add_run(Text::from(inline_code).into_run()),
-            Ast::Strong(strong) => from_strong(strong)
-                .into_iter()
-                .fold(p, |p, text| p.add_run(text.into_run())),
-            Ast::Emphasis(emphasis) => from_emphasis(emphasis)
-                .into_iter()
-                .fold(p, |p, text| p.add_run(text.into_run())),
+static MAX_HEADING_DEPTH: AtomicU8 = AtomicU8::new(0);
 
-            Ast::Paragraph(_)
-            | Ast::Root(_)
-            | Ast::BlockQuote(_)
-            | Ast::Code(_)
-            | Ast::Math(_)
-            | Ast::Heading(_)
-            | Ast::ThematicBreak(_)
-            | Ast::List(_)
-            | Ast::ListItem(_)
-            | Ast::Table(_)
-            | Ast::TableRow(_)
-            | Ast::TableCell(_) => unreachable!(),
+pub fn max_heading_depth() -> usize {
+    MAX_HEADING_DEPTH.load(Relaxed) as _
+}
 
-            Ast::FootnoteDefinition(_)
-            | Ast::MdxJsxFlowElement(_)
-            | Ast::MdxjsEsm(_)
-            | Ast::Toml(_)
-            | Ast::Yaml(_)
-            | Ast::Break(_)
-            | Ast::InlineMath(_)
-            | Ast::Delete(_)
-            | Ast::MdxTextExpression(_)
-            | Ast::FootnoteReference(_)
-            | Ast::Html(_)
-            | Ast::Image(_)
-            | Ast::ImageReference(_)
-            | Ast::MdxJsxTextElement(_)
-            | Ast::Link(_)
-            | Ast::LinkReference(_)
-            | Ast::MdxFlowExpression(_)
-            | Ast::Definition(_) => todo!(),
-        }
-    }
+pub fn from_heading(heading: md::Heading) -> docx::Paragraph {
+    let md::Heading {
+        depth, children, ..
+    } = heading;
+    MAX_HEADING_DEPTH.fetch_max(depth, Relaxed);
+
+    let mut p = docx::Paragraph::new();
+    p.children.extend(to_paragraph_children(children));
+    p = heading_style(p, depth);
+    p = heading_numbering(p, depth);
     p
+}
+
+pub fn from_paragraph(md::Paragraph { children, .. }: md::Paragraph) -> docx::Paragraph {
+    let mut p = docx::Paragraph::new();
+    p.children.extend(to_paragraph_children(children));
+    p
+}
+
+pub fn from_link(md::Link { children, url, .. }: md::Link) -> docx::Hyperlink {
+    let mut h = docx::Hyperlink::new(url, docx::HyperlinkType::External);
+    h.children.extend(to_paragraph_children(children));
+    h
 }

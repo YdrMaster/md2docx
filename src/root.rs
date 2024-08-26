@@ -1,8 +1,8 @@
-﻿use crate::{heading::from_heading, list::from_list, paragraph::from_paragraph};
-use docx_rs::Docx;
-use markdown::mdast::{Node as Ast, Root};
+﻿use crate::{
+    docx::Docx, list::from_list, md, paragraph::from_heading, paragraph::from_paragraph, Ast,
+};
 
-pub fn from_root(root: Root) -> Docx {
+pub fn from_root(root: md::Root) -> Docx {
     let mut docx = Docx::new();
     for node in root.children {
         docx = match node {

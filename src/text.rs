@@ -1,6 +1,54 @@
-﻿use crate::style::inline_code_style;
-use docx_rs::Run;
-use markdown::mdast::{self, Emphasis, Node as Ast, Strong};
+﻿use crate::{docx, md, paragraph::from_link, style::inline_code_style, Ast};
+
+pub fn to_paragraph_children(children: impl IntoIterator<Item = Ast>) -> Vec<docx::ParagraphChild> {
+    type Child = docx::ParagraphChild;
+    let mut ans = Vec::new();
+    for ast in children {
+        match ast {
+            Ast::Text(text) => ans.push(Text::from(text).into_child()),
+            Ast::InlineCode(inline_code) => ans.push(Text::from(inline_code).into_child()),
+            Ast::Strong(strong) => {
+                ans.extend(from_strong(strong).into_iter().map(|t| t.into_child()))
+            }
+            Ast::Emphasis(emphasis) => {
+                ans.extend(from_emphasis(emphasis).into_iter().map(|t| t.into_child()))
+            }
+            Ast::Link(link) => ans.push(Child::Hyperlink(from_link(link))),
+
+            Ast::Root(_)
+            | Ast::Heading(_)
+            | Ast::BlockQuote(_)
+            | Ast::Code(_)
+            | Ast::Math(_)
+            | Ast::List(_)
+            | Ast::ListItem(_)
+            | Ast::Table(_)
+            | Ast::TableRow(_)
+            | Ast::TableCell(_) => unreachable!(),
+
+            Ast::FootnoteDefinition(_)
+            | Ast::MdxJsxFlowElement(_)
+            | Ast::MdxjsEsm(_)
+            | Ast::Toml(_)
+            | Ast::Yaml(_)
+            | Ast::Break(_)
+            | Ast::InlineMath(_)
+            | Ast::Delete(_)
+            | Ast::MdxTextExpression(_)
+            | Ast::FootnoteReference(_)
+            | Ast::Html(_)
+            | Ast::Image(_)
+            | Ast::ImageReference(_)
+            | Ast::MdxJsxTextElement(_)
+            | Ast::LinkReference(_)
+            | Ast::MdxFlowExpression(_)
+            | Ast::ThematicBreak(_)
+            | Ast::Definition(_)
+            | Ast::Paragraph(_) => todo!(),
+        };
+    }
+    ans
+}
 
 pub struct Text {
     style: TextStyle,
@@ -42,20 +90,21 @@ impl Text {
         }
     }
 
-    pub fn into_run(self) -> Run {
-        let run = Run::new().add_text(self.content);
-        match self.style {
+    pub fn into_child(self) -> docx::ParagraphChild {
+        let run = docx::Run::new().add_text(self.content);
+        let run = match self.style {
             TextStyle::Normal => run,
             TextStyle::Strong => run.bold(),
             TextStyle::Emphasis => run.italic(),
             TextStyle::StrongEmphasis => run.bold().italic(),
             TextStyle::InlineCode => inline_code_style(run),
-        }
+        };
+        docx::ParagraphChild::Run(Box::new(run))
     }
 }
 
-impl From<mdast::Text> for Text {
-    fn from(value: mdast::Text) -> Self {
+impl From<md::Text> for Text {
+    fn from(value: md::Text) -> Self {
         Self {
             style: TextStyle::Normal,
             content: value.value,
@@ -63,8 +112,8 @@ impl From<mdast::Text> for Text {
     }
 }
 
-impl From<mdast::InlineCode> for Text {
-    fn from(value: mdast::InlineCode) -> Self {
+impl From<md::InlineCode> for Text {
+    fn from(value: md::InlineCode) -> Self {
         Self {
             style: TextStyle::InlineCode,
             content: value.value,
@@ -72,7 +121,7 @@ impl From<mdast::InlineCode> for Text {
     }
 }
 
-pub fn from_strong(strong: Strong) -> Vec<Text> {
+pub fn from_strong(strong: md::Strong) -> Vec<Text> {
     let mut ans = Vec::new();
     for node in strong.children {
         match node {
@@ -119,7 +168,7 @@ pub fn from_strong(strong: Strong) -> Vec<Text> {
     ans
 }
 
-pub fn from_emphasis(strong: Emphasis) -> Vec<Text> {
+pub fn from_emphasis(strong: md::Emphasis) -> Vec<Text> {
     let mut ans = Vec::new();
     for node in strong.children {
         match node {

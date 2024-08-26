@@ -1,14 +1,15 @@
-﻿use docx_rs::{Docx, Paragraph, Run, Style, StyleType};
+﻿use crate::{
+    docx::{self, Docx, Run, Style, StyleType},
+    paragraph::max_heading_depth,
+};
 use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
-
-use crate::heading::max_heading_depth;
 
 const HEADING_DTYLE_ID: fn(u8) -> String = |depth| format!("Heading{depth}");
 const INLINE_CODE_STYLE_ID: &str = "InlineCode";
 
 static INLINE_CODE_STYLE: AtomicBool = AtomicBool::new(false);
 
-pub fn heading_style(p: Paragraph, depth: u8) -> Paragraph {
+pub fn heading_style(p: docx::Paragraph, depth: u8) -> docx::Paragraph {
     p.style(&HEADING_DTYLE_ID(depth))
 }
 

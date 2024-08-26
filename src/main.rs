@@ -1,4 +1,3 @@
-mod heading;
 mod list;
 mod numbering;
 mod paragraph;
@@ -6,7 +5,11 @@ mod root;
 mod style;
 mod text;
 
-use markdown::{mdast::Node, to_mdast, ParseOptions};
+use docx_rs as docx;
+use markdown::{
+    mdast::{self as md, Node as Ast},
+    to_mdast, ParseOptions,
+};
 use numbering::add_numbering;
 use std::{
     borrow::Cow,
@@ -17,7 +20,7 @@ use style::add_style;
 
 fn main() {
     let readme = read_to_string("README.md").unwrap();
-    let Ok(Node::Root(root)) = to_mdast(&readme, &ParseOptions::gfm()) else {
+    let Ok(Ast::Root(root)) = to_mdast(&readme, &ParseOptions::gfm()) else {
         panic!("Failed to parse markdown");
     };
     println!("{root:#?}");
