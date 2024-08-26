@@ -1,4 +1,4 @@
-﻿use crate::{docx, md, numbering::ListNumbering, paragraph::from_paragraph, Ast};
+﻿use super::{docx, md, numbering::ListNumbering, paragraph::from_paragraph, Ast};
 
 pub fn from_list(list: md::List) -> Vec<docx::Paragraph> {
     let md::List {

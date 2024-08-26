@@ -1,4 +1,4 @@
-﻿use crate::{
+﻿use super::{
     docx::Docx, list::from_list, md, paragraph::from_heading, paragraph::from_paragraph, Ast,
 };
 

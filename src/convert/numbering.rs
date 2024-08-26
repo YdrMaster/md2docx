@@ -1,4 +1,4 @@
-﻿use crate::{
+﻿use super::{
     docx::{self, Docx, IndentLevel, NumberingId},
     paragraph::max_heading_depth,
 };

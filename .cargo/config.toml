@@ -1,0 +1,4 @@
+﻿[alias]
+debug = "run --"
+show = "run --release -- show"
+convert = "run --release -- convert"

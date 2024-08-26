@@ -7,3 +7,4 @@ authors = ["YdrMaster <ydrml@hotmail.com>"]
 [dependencies]
 markdown = "=1.0.0-alpha.20"
 docx-rs = "0.4"
+clap = { version = "4.5", features = ["derive"] }

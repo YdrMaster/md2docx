@@ -1,5 +1,8 @@
-﻿use crate::{
-    docx, md, numbering::heading_numbering, style::heading_style, text::to_paragraph_children,
+﻿use super::{
+    docx, md,
+    numbering::heading_numbering,
+    style::{body_text_style, heading_style},
+    text::to_paragraph_children,
 };
 use std::sync::atomic::{AtomicU8, Ordering::Relaxed};
 
@@ -17,15 +20,14 @@ pub fn from_heading(heading: md::Heading) -> docx::Paragraph {
 
     let mut p = docx::Paragraph::new();
     p.children.extend(to_paragraph_children(children));
-    p = heading_style(p, depth);
     p = heading_numbering(p, depth);
-    p
+    heading_style(p, depth)
 }
 
 pub fn from_paragraph(md::Paragraph { children, .. }: md::Paragraph) -> docx::Paragraph {
     let mut p = docx::Paragraph::new();
     p.children.extend(to_paragraph_children(children));
-    p
+    body_text_style(p)
 }
 
 pub fn from_link(md::Link { children, url, .. }: md::Link) -> docx::Hyperlink {

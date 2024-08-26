@@ -1,4 +1,4 @@
-﻿use crate::{docx, md, paragraph::from_link, style::inline_code_style, Ast};
+﻿use super::{docx, md, paragraph::from_link, style::inline_code_style, Ast};
 
 pub fn to_paragraph_children(children: impl IntoIterator<Item = Ast>) -> Vec<docx::ParagraphChild> {
     type Child = docx::ParagraphChild;
