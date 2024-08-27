@@ -22,8 +22,6 @@ A **B `CD` *~E~ **F`G`** H* I** ~***J***~
 text
 ```
 
----
-
 > Quote line
 
 > Quote paragraph 1

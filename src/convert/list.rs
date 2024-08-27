@@ -1,6 +1,7 @@
 ﻿use super::{docx, md, numbering::ListNumbering, paragraph::from_paragraph, Ast};
+use std::path::Path;
 
-pub fn from_list(list: md::List) -> Vec<docx::Paragraph> {
+pub fn from_list(list: md::List, dir: &Path) -> Vec<docx::Paragraph> {
     let md::List {
         children,
         ordered,
@@ -24,12 +25,22 @@ pub fn from_list(list: md::List) -> Vec<docx::Paragraph> {
         let Some(Ast::Paragraph(first)) = children.next() else {
             unreachable!()
         };
-        ans.push(numbering.apply(from_paragraph(first)));
+        let (paragraph, caption) = from_paragraph(first, dir);
+        ans.push(numbering.apply(paragraph));
+        if let Some(c) = caption {
+            ans.push(c);
+        }
 
         for ast in children {
             match ast {
-                Ast::Paragraph(p) => ans.push(from_paragraph(p)),
-                Ast::List(list) => ans.extend(from_list(list)),
+                Ast::Paragraph(p) => {
+                    let (paragraph, caption) = from_paragraph(p, dir);
+                    ans.push(paragraph);
+                    if let Some(c) = caption {
+                        ans.push(c);
+                    }
+                }
+                Ast::List(list) => ans.extend(from_list(list, dir)),
 
                 Ast::Root(_) | Ast::ListItem(_) => unreachable!(),
 

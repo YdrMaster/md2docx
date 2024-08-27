@@ -3,28 +3,34 @@
     list::from_list,
     md,
     paragraph::{from_heading, from_paragraph},
-    table::{from_block_quote, from_code},
+    table::{from_block_quote, from_code, from_table},
     Ast,
 };
+use std::path::Path;
 
-pub fn from_root(root: md::Root) -> Docx {
+pub fn from_root(root: md::Root, dir: &Path) -> Docx {
     let mut docx = Docx::new();
     for node in root.children {
         docx = match node {
             Ast::Heading(heading) => docx.add_paragraph(from_heading(heading)),
-            Ast::Paragraph(paragraph) => docx.add_paragraph(from_paragraph(paragraph)),
+            Ast::Paragraph(paragraph) => {
+                let (paragraph, caption) = from_paragraph(paragraph, dir);
+                match caption {
+                    Some(c) => docx.add_paragraph(paragraph).add_paragraph(c),
+                    None => docx.add_paragraph(paragraph),
+                }
+            }
             Ast::Code(code) => {
                 let (code, caption) = from_code(code);
                 docx.add_table(code).add_paragraph(caption)
             }
             Ast::BlockQuote(quote) => docx
-                .add_table(from_block_quote(quote))
+                .add_table(from_block_quote(quote, dir))
                 .add_paragraph(docx::Paragraph::new()),
-            Ast::List(list) => from_list(list)
+            Ast::Table(table) => docx.add_table(from_table(table)),
+            Ast::List(list) => from_list(list, dir)
                 .into_iter()
                 .fold(docx, |docx, p| docx.add_paragraph(p)),
-
-            Ast::Table(_) | Ast::ThematicBreak(_) => todo!(),
 
             Ast::Root(_)
             | Ast::Text(_)
@@ -40,7 +46,8 @@ pub fn from_root(root: md::Root) -> Docx {
             | Ast::TableRow(_)
             | Ast::TableCell(_) => unreachable!(),
 
-            Ast::Html(_)
+            Ast::ThematicBreak(_)
+            | Ast::Html(_)
             | Ast::Toml(_)
             | Ast::Yaml(_)
             | Ast::Math(_)

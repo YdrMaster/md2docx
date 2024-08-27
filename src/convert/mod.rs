@@ -27,6 +27,7 @@ pub struct Args {
 impl Args {
     pub fn convert(self) {
         let path = self.file;
+        let dir = path.parent().unwrap();
         let name = path
             .file_name()
             .unwrap()
@@ -39,7 +40,7 @@ impl Args {
         let Ok(Ast::Root(root)) = to_mdast(&md, &ParseOptions::gfm()) else {
             panic!("Failed to parse markdown");
         };
-        let docx = root::from_root(root);
+        let docx = root::from_root(root, dir);
         let docx = add_style(docx);
         let docx = add_numbering(docx);
 
