@@ -61,7 +61,7 @@ pub fn add_numbering(docx: Docx) -> Docx {
             0,
             Start::new(1),
             NumberFormat::new("bullet"),
-            LevelText::new("⚪"),
+            LevelText::new("●"),
             LevelJc::new("left"),
         )
         .indent(None, None, None, None)

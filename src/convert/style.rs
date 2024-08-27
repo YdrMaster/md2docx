@@ -19,12 +19,14 @@ const BODY_TEXT_STYLE_ID: &str = "BodyText";
 const IMAGE_STYLE_ID: &str = "Image";
 const TABLE_STYLE_ID: &str = "Table";
 const CAPTION_STYLE_ID: &str = "Caption";
+const QUOTE_STYLE_ID: &str = "Quote";
 
 static LANGUAGES: LazyLock<Mutex<HashSet<String>>> = LazyLock::new(|| Default::default());
 static INLINE_CODE_STYLE: AtomicBool = AtomicBool::new(false);
 static IMAGE_STYLE: AtomicBool = AtomicBool::new(false);
 static TABLE_STYLE: AtomicBool = AtomicBool::new(false);
 static CAPTION_STYLE: AtomicBool = AtomicBool::new(false);
+static QUOTE_STYLE: AtomicBool = AtomicBool::new(false);
 
 pub fn heading_style(p: docx::Paragraph, depth: u8) -> docx::Paragraph {
     p.style(&HEADING_STYLE_ID(depth))
@@ -44,11 +46,6 @@ pub fn code_style(p: docx::Paragraph, lang: &str) -> docx::Paragraph {
     p.style(&CODE_STYLE_ID(lang))
 }
 
-pub fn caption_style(p: docx::Paragraph) -> docx::Paragraph {
-    CAPTION_STYLE.store(true, Relaxed);
-    p.style(CAPTION_STYLE_ID)
-}
-
 pub fn image_style(p: docx::Paragraph) -> docx::Paragraph {
     IMAGE_STYLE.store(true, Relaxed);
     p.style(IMAGE_STYLE_ID)
@@ -58,6 +55,17 @@ pub fn table_style(t: docx::Table) -> docx::Table {
     TABLE_STYLE.store(true, Relaxed);
     t.style(TABLE_STYLE_ID)
 }
+
+pub fn caption_style(p: docx::Paragraph) -> docx::Paragraph {
+    CAPTION_STYLE.store(true, Relaxed);
+    p.style(CAPTION_STYLE_ID)
+}
+
+// TODO
+// pub fn quote_style(p: docx::Paragraph) -> docx::Paragraph {
+//     QUOTE_STYLE.store(true, Relaxed);
+//     p.style(QUOTE_STYLE_ID)
+// }
 
 pub fn add_style(mut docx: Docx, settings: toml::Table) -> Docx {
     use docx::{
@@ -103,8 +111,18 @@ pub fn add_style(mut docx: Docx, settings: toml::Table) -> Docx {
     if CAPTION_STYLE.load(Relaxed) {
         docx = docx.add_style(modify(
             Style::new(CAPTION_STYLE_ID, StyleType::Paragraph)
+                .based_on(BODY_TEXT_STYLE_ID)
                 .align(Center)
                 .name(CAPTION_STYLE_ID),
+            &settings,
+        ));
+    }
+    if QUOTE_STYLE.load(Relaxed) {
+        docx = docx.add_style(modify(
+            Style::new(BODY_TEXT_STYLE_ID, StyleType::Paragraph)
+                .based_on(BODY_TEXT_STYLE_ID)
+                .align(Center)
+                .name(QUOTE_STYLE_ID),
             &settings,
         ));
     }
@@ -113,6 +131,7 @@ pub fn add_style(mut docx: Docx, settings: toml::Table) -> Docx {
         if !languages.is_empty() {
             docx = docx.add_style(modify(
                 Style::new(BASE_CODE_STYLE_ID, StyleType::Paragraph)
+                    .based_on(BODY_TEXT_STYLE_ID)
                     .align(Left)
                     .name("Code"),
                 &settings,
@@ -146,6 +165,8 @@ fn modify(mut style: docx::Style, settings: &toml::Table) -> docx::Style {
             "font" => style = set_fonts(style, val),
             "font-size" => style = set_font_size(style, val),
             "align" => style = set_alignment(style, val),
+            "bold" => style = set_bold(style, val),
+            "italic" => style = set_italic(style, val),
             key => eprintln!("Unknown style setting: {}", key),
         }
     }
@@ -223,4 +244,22 @@ fn set_alignment(style: docx::Style, val: &Val) -> docx::Style {
         },
         _ => panic!("align must be a string"),
     }
+}
+
+fn set_bold(mut style: docx::Style, val: &Val) -> docx::Style {
+    match val {
+        Val::Boolean(true) => style.run_property = style.run_property.bold(),
+        Val::Boolean(false) => style.run_property = style.run_property.disable_bold(),
+        _ => panic!("bold must be a boolean"),
+    }
+    style
+}
+
+fn set_italic(mut style: docx::Style, val: &Val) -> docx::Style {
+    match val {
+        Val::Boolean(true) => style.run_property = style.run_property.italic(),
+        Val::Boolean(false) => style.run_property = style.run_property.disable_italic(),
+        _ => panic!("bold must be a boolean"),
+    }
+    style
 }
