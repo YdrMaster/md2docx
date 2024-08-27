@@ -1,4 +1,5 @@
 ﻿[alias]
 debug = "run --"
+util-help = "run --release -- help"
 show = "run --release -- show"
 convert = "run --release -- convert"
