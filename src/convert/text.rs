@@ -13,6 +13,9 @@ pub fn to_paragraph_children(children: impl IntoIterator<Item = Ast>) -> Vec<doc
             Ast::Emphasis(emphasis) => {
                 ans.extend(from_emphasis(emphasis).into_iter().map(|t| t.into_child()))
             }
+            Ast::Delete(delete) => {
+                ans.extend(from_delete(delete).into_iter().map(|t| t.into_child()))
+            }
             Ast::Link(link) => ans.push(Child::Hyperlink(from_link(link))),
 
             Ast::Root(_)
@@ -33,7 +36,6 @@ pub fn to_paragraph_children(children: impl IntoIterator<Item = Ast>) -> Vec<doc
             | Ast::Yaml(_)
             | Ast::Break(_)
             | Ast::InlineMath(_)
-            | Ast::Delete(_)
             | Ast::MdxTextExpression(_)
             | Ast::FootnoteReference(_)
             | Ast::Html(_)
@@ -56,47 +58,55 @@ pub struct Text {
 }
 
 enum TextStyle {
-    Normal,
-    Strong,
-    Emphasis,
-    StrongEmphasis,
+    Normal {
+        strong: bool,
+        emphasis: bool,
+        delete: bool,
+    },
     InlineCode,
 }
 
 impl Text {
-    pub fn strong(self) -> Self {
-        Self {
-            style: match self.style {
-                TextStyle::Normal => TextStyle::Strong,
-                TextStyle::Strong => TextStyle::Strong,
-                TextStyle::Emphasis => TextStyle::StrongEmphasis,
-                TextStyle::StrongEmphasis => TextStyle::StrongEmphasis,
-                TextStyle::InlineCode => TextStyle::InlineCode,
-            },
-            content: self.content,
+    pub fn strong(mut self) -> Self {
+        if let TextStyle::Normal { strong, .. } = &mut self.style {
+            *strong = true;
         }
+        self
     }
 
-    pub fn emphasis(self) -> Self {
-        Self {
-            style: match self.style {
-                TextStyle::Normal => TextStyle::Emphasis,
-                TextStyle::Strong => TextStyle::StrongEmphasis,
-                TextStyle::Emphasis => TextStyle::Emphasis,
-                TextStyle::StrongEmphasis => TextStyle::StrongEmphasis,
-                TextStyle::InlineCode => TextStyle::InlineCode,
-            },
-            content: self.content,
+    pub fn emphasis(mut self) -> Self {
+        if let TextStyle::Normal { emphasis, .. } = &mut self.style {
+            *emphasis = true;
         }
+        self
+    }
+
+    pub fn delete(mut self) -> Self {
+        if let TextStyle::Normal { delete, .. } = &mut self.style {
+            *delete = true;
+        }
+        self
     }
 
     pub fn into_child(self) -> docx::ParagraphChild {
-        let run = docx::Run::new().add_text(self.content);
+        let mut run = docx::Run::new().add_text(self.content);
         let run = match self.style {
-            TextStyle::Normal => run,
-            TextStyle::Strong => run.bold(),
-            TextStyle::Emphasis => run.italic(),
-            TextStyle::StrongEmphasis => run.bold().italic(),
+            TextStyle::Normal {
+                strong,
+                emphasis,
+                delete,
+            } => {
+                if strong {
+                    run.run_property = run.run_property.bold();
+                }
+                if emphasis {
+                    run.run_property = run.run_property.italic();
+                }
+                if delete {
+                    run.run_property = run.run_property.strike();
+                }
+                run
+            }
             TextStyle::InlineCode => inline_code_style(run),
         };
         docx::ParagraphChild::Run(Box::new(run))
@@ -106,7 +116,11 @@ impl Text {
 impl From<md::Text> for Text {
     fn from(value: md::Text) -> Self {
         Self {
-            style: TextStyle::Normal,
+            style: TextStyle::Normal {
+                strong: false,
+                emphasis: false,
+                delete: false,
+            },
             content: value.value,
         }
     }
@@ -130,6 +144,7 @@ pub fn from_strong(strong: md::Strong) -> Vec<Text> {
             Ast::Emphasis(emphasis) => {
                 ans.extend(from_emphasis(emphasis).into_iter().map(|t| t.strong()))
             }
+            Ast::Delete(delete) => ans.extend(from_delete(delete).into_iter().map(|t| t.strong())),
 
             Ast::Strong(_)
             | Ast::Root(_)
@@ -152,7 +167,6 @@ pub fn from_strong(strong: md::Strong) -> Vec<Text> {
             | Ast::Yaml(_)
             | Ast::Break(_)
             | Ast::InlineMath(_)
-            | Ast::Delete(_)
             | Ast::MdxTextExpression(_)
             | Ast::FootnoteReference(_)
             | Ast::Html(_)
@@ -177,6 +191,9 @@ pub fn from_emphasis(strong: md::Emphasis) -> Vec<Text> {
             Ast::Strong(strong) => {
                 ans.extend(from_strong(strong).into_iter().map(|t| t.emphasis()))
             }
+            Ast::Delete(delete) => {
+                ans.extend(from_delete(delete).into_iter().map(|t| t.emphasis()))
+            }
 
             Ast::Emphasis(_)
             | Ast::Root(_)
@@ -199,7 +216,53 @@ pub fn from_emphasis(strong: md::Emphasis) -> Vec<Text> {
             | Ast::Yaml(_)
             | Ast::Break(_)
             | Ast::InlineMath(_)
-            | Ast::Delete(_)
+            | Ast::MdxTextExpression(_)
+            | Ast::FootnoteReference(_)
+            | Ast::Html(_)
+            | Ast::MdxJsxTextElement(_)
+            | Ast::Link(_)
+            | Ast::LinkReference(_)
+            | Ast::MdxFlowExpression(_)
+            | Ast::ListItem(_)
+            | Ast::Definition(_)
+            | Ast::Paragraph(_) => todo!(),
+        }
+    }
+    ans
+}
+
+pub fn from_delete(delete: md::Delete) -> Vec<Text> {
+    let mut ans = Vec::new();
+    for node in delete.children {
+        match node {
+            Ast::Text(text) => ans.push(Text::from(text).delete()),
+            Ast::InlineCode(inline_code) => ans.push(Text::from(inline_code).delete()),
+            Ast::Strong(strong) => ans.extend(from_strong(strong).into_iter().map(|t| t.delete())),
+            Ast::Emphasis(emphasis) => {
+                ans.extend(from_emphasis(emphasis).into_iter().map(|t| t.delete()))
+            }
+
+            Ast::Delete(_)
+            | Ast::Root(_)
+            | Ast::ThematicBreak(_)
+            | Ast::Code(_)
+            | Ast::Math(_)
+            | Ast::Image(_)
+            | Ast::ImageReference(_)
+            | Ast::Heading(_)
+            | Ast::Table(_)
+            | Ast::TableRow(_)
+            | Ast::TableCell(_) => unreachable!(),
+
+            Ast::BlockQuote(_)
+            | Ast::FootnoteDefinition(_)
+            | Ast::MdxJsxFlowElement(_)
+            | Ast::List(_)
+            | Ast::MdxjsEsm(_)
+            | Ast::Toml(_)
+            | Ast::Yaml(_)
+            | Ast::Break(_)
+            | Ast::InlineMath(_)
             | Ast::MdxTextExpression(_)
             | Ast::FootnoteReference(_)
             | Ast::Html(_)

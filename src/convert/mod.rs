@@ -54,9 +54,9 @@ fn find_available_name(name: &str) -> PathBuf {
         return path;
     }
     for i in 1.. {
-        let name = PathBuf::from(format!("{name} ({i}).docx"));
-        if !name.exists() {
-            return name.into();
+        let path = PathBuf::from(format!("{name} ({i}).docx"));
+        if !path.exists() {
+            return path;
         }
     }
     unreachable!()

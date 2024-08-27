@@ -1,11 +1,15 @@
-﻿use markdown::{
+﻿use image::ImageReader;
+use markdown::{
     mdast::{
-        BlockQuote, Code, Delete, Emphasis, Heading, InlineCode, Link, List, ListItem, Node as Ast,
-        Paragraph, Root, Strong, Table, TableCell, TableRow, Text, ThematicBreak,
+        BlockQuote, Code, Delete, Emphasis, Heading, Image, InlineCode, Link, List, ListItem,
+        Node as Ast, Paragraph, Root, Strong, Table, TableCell, TableRow, Text, ThematicBreak,
     },
     to_mdast, ParseOptions,
 };
-use std::{fs::read_to_string, path::PathBuf};
+use std::{
+    fs::read_to_string,
+    path::{Path, PathBuf},
+};
 
 #[derive(Args, Default)]
 pub struct Args {
@@ -21,31 +25,31 @@ impl Args {
             panic!("Failed to parse markdown");
         };
         let mut lines = vec![false];
-        print_ast(Ast::Root(root), &mut lines);
+        print_ast(Ast::Root(root), path.parent().unwrap(), &mut lines);
         println!();
         println!();
     }
 }
 
-fn print_ast(ast: Ast, lines: &mut Vec<bool>) {
+fn print_ast(ast: Ast, dir: &Path, lines: &mut Vec<bool>) {
     match ast {
         Ast::Root(Root { children, .. }) => {
             print!("{}Root", indent(lines));
-            print_children(children, lines);
+            print_children(children, dir, lines);
         }
         Ast::Heading(Heading {
             children, depth, ..
         }) => {
             print!("{}Heading {depth}", indent(lines));
-            print_children(children, lines);
+            print_children(children, dir, lines);
         }
         Ast::Paragraph(Paragraph { children, .. }) => {
             print!("{}Paragraph", indent(lines));
-            print_children(children, lines);
+            print_children(children, dir, lines);
         }
         Ast::Link(Link { children, url, .. }) => {
             print!("{}Link: {url}", indent(lines));
-            print_children(children, lines);
+            print_children(children, dir, lines);
         }
         Ast::List(List {
             children,
@@ -60,11 +64,11 @@ fn print_ast(ast: Ast, lines: &mut Vec<bool>) {
                 (_, _) => panic!(),
             }
             assert!(children.iter().all(|ast| matches!(ast, Ast::ListItem(_))));
-            print_children(children, lines);
+            print_children(children, dir, lines);
         }
         Ast::ListItem(ListItem { children, .. }) => {
             print!("{}Item", indent(lines));
-            print_children(children, lines);
+            print_children(children, dir, lines);
         }
         Ast::Text(Text { value, .. }) => {
             print!("{}Text: {value:?}", indent(lines));
@@ -74,29 +78,27 @@ fn print_ast(ast: Ast, lines: &mut Vec<bool>) {
         }
         Ast::Delete(Delete { children, .. }) => {
             print!("{}Delete", indent(lines));
-            print_children(children, lines);
+            print_children(children, dir, lines);
         }
         Ast::Strong(Strong { children, .. }) => {
             print!("{}Strong", indent(lines));
-            print_children(children, lines);
+            print_children(children, dir, lines);
         }
         Ast::Emphasis(Emphasis { children, .. }) => {
             print!("{}Emphasis", indent(lines));
-            print_children(children, lines);
+            print_children(children, dir, lines);
         }
 
         Ast::BlockQuote(BlockQuote { children, .. }) => {
             print!("{}BlockQuote", indent(lines));
-            print_children(children, lines);
+            print_children(children, dir, lines);
         }
         Ast::Code(Code {
             value, lang, meta, ..
-        }) => {
-            print!(
-                "{}Code(lang={lang:?} meta={meta:?}): {value:?}",
-                indent(lines)
-            );
-        }
+        }) => print!(
+            "{}Code(lang={lang:?} meta={meta:?}): {value:?}",
+            indent(lines)
+        ),
         Ast::ThematicBreak(ThematicBreak { .. }) => {
             print!("{}ThematicBreak", indent(lines));
         }
@@ -105,44 +107,52 @@ fn print_ast(ast: Ast, lines: &mut Vec<bool>) {
         }) => {
             print!("{}Table align={align:?}", indent(lines));
             assert!(children.iter().all(|ast| matches!(ast, Ast::TableRow(_))));
-            print_children(children, lines);
+            print_children(children, dir, lines);
         }
         Ast::TableRow(TableRow { children, .. }) => {
             print!("{}TableRow", indent(lines));
             assert!(children.iter().all(|ast| matches!(ast, Ast::TableCell(_))));
-            print_children(children, lines);
+            print_children(children, dir, lines);
         }
         Ast::TableCell(TableCell { children, .. }) => {
             print!("{}TableCell", indent(lines));
-            print_children(children, lines);
+            print_children(children, dir, lines);
+        }
+        Ast::Image(Image { url, alt, .. }) => {
+            print!("{}Image: url={url} alt={alt}", indent(lines));
+            if let Some(img) = ImageReader::open(dir.join(url))
+                .ok()
+                .and_then(|f| f.decode().ok())
+            {
+                print!(" size={}x{}", img.width(), img.height())
+            };
         }
 
-        Ast::FootnoteDefinition(_) => todo!(),
-        Ast::MdxJsxFlowElement(_) => todo!(),
-        Ast::MdxjsEsm(_) => todo!(),
-        Ast::Toml(_) => todo!(),
-        Ast::Yaml(_) => todo!(),
-        Ast::Break(_) => todo!(),
-        Ast::InlineMath(_) => todo!(),
-        Ast::MdxTextExpression(_) => todo!(),
-        Ast::FootnoteReference(_) => todo!(),
-        Ast::Html(_) => todo!(),
-        Ast::Image(_) => todo!(),
-        Ast::ImageReference(_) => todo!(),
-        Ast::MdxJsxTextElement(_) => todo!(),
-        Ast::LinkReference(_) => todo!(),
-        Ast::Math(_) => todo!(),
-        Ast::MdxFlowExpression(_) => todo!(),
-        Ast::Definition(_) => todo!(),
+        Ast::Html(_)
+        | Ast::Toml(_)
+        | Ast::Yaml(_)
+        | Ast::Math(_)
+        | Ast::Break(_)
+        | Ast::InlineMath(_)
+        | Ast::LinkReference(_)
+        | Ast::ImageReference(_)
+        | Ast::MdxjsEsm(_)
+        | Ast::MdxJsxFlowElement(_)
+        | Ast::MdxTextExpression(_)
+        | Ast::MdxFlowExpression(_)
+        | Ast::MdxJsxTextElement(_)
+        | Ast::Definition(_)
+        | Ast::FootnoteReference(_)
+        | Ast::FootnoteDefinition(_) => todo!(),
     }
 }
 
-fn print_children(children: Vec<Ast>, lines: &mut Vec<bool>) {
+fn print_children(children: Vec<Ast>, dir: &Path, lines: &mut Vec<bool>) {
     let last = children.len() - 1;
     for (i, ast) in children.into_iter().enumerate() {
         println!();
         lines.push(i < last);
-        print_ast(ast, lines);
+        print_ast(ast, dir, lines);
         lines.pop();
     }
 }
