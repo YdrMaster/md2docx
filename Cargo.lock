@@ -600,6 +600,7 @@ dependencies = [
  "docx-rs",
  "image 0.25.2",
  "markdown",
+ "toml",
 ]
 
 [[package]]

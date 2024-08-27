@@ -1,2 +1,5 @@
 /target
 *.docx
+*.toml
+!/Cargo.toml
+!/.cargo/config.toml

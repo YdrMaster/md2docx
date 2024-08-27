@@ -20,28 +20,41 @@ use style::add_style;
 
 #[derive(Args, Default)]
 pub struct Args {
-    /// The file to show
+    /// The file to convert
     file: PathBuf,
+    /// The style file
+    #[clap(short, long)]
+    style: Option<PathBuf>,
 }
 
 impl Args {
     pub fn convert(self) {
-        let path = self.file;
-        let dir = path.parent().unwrap();
-        let name = path
+        let Self { file, style } = self;
+        let dir = file.parent().unwrap();
+        let name = file
             .file_name()
             .unwrap()
             .to_str()
             .unwrap()
             .strip_suffix(".md")
             .unwrap();
+        let style = style
+            .map(|p| {
+                read_to_string(&p)
+                    .unwrap_or_else(|e| panic!("Failed to read style file: {e}"))
+                    .parse::<toml::Table>()
+                    .unwrap_or_else(|e| {
+                        panic!("Failed to parse style file, must be in TOML format: {e}")
+                    })
+            })
+            .unwrap_or_default();
 
-        let md = read_to_string(&path).unwrap();
+        let md = read_to_string(&file).unwrap();
         let Ok(Ast::Root(root)) = to_mdast(&md, &ParseOptions::gfm()) else {
             panic!("Failed to parse markdown");
         };
         let docx = root::from_root(root, dir);
-        let docx = add_style(docx);
+        let docx = add_style(docx, style);
         let docx = add_numbering(docx);
 
         let name = find_available_name(name);
