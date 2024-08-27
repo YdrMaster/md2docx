@@ -3,6 +3,7 @@ mod numbering;
 mod paragraph;
 mod root;
 mod style;
+mod table;
 mod text;
 
 use docx_rs as docx;
