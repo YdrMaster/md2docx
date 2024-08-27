@@ -12,6 +12,7 @@ use std::{
 use toml::Value as Val;
 
 const HEADING_STYLE_ID: fn(u8) -> String = |depth| format!("Heading{depth}");
+const BASE_CODE_STYLE_ID: &str = "Code";
 const CODE_STYLE_ID: fn(&str) -> String = |lang| format!("Code-{}", lang.to_ascii_lowercase());
 const INLINE_CODE_STYLE_ID: &str = "InlineCode";
 const BODY_TEXT_STYLE_ID: &str = "BodyText";
@@ -107,14 +108,26 @@ pub fn add_style(mut docx: Docx, settings: toml::Table) -> Docx {
             &settings,
         ));
     }
-    for lang in LANGUAGES.lock().unwrap().iter() {
-        docx = docx.add_style(modify(
-            Style::new(CODE_STYLE_ID(lang), StyleType::Paragraph)
-                .align(Left)
-                .name(format!("Code {lang}")),
-            &settings,
-        ));
+    {
+        let languages = LANGUAGES.lock().unwrap();
+        if !languages.is_empty() {
+            docx = docx.add_style(modify(
+                Style::new(BASE_CODE_STYLE_ID, StyleType::Paragraph)
+                    .align(Left)
+                    .name("Code"),
+                &settings,
+            ));
+        }
+        for lang in &*languages {
+            docx = docx.add_style(modify(
+                Style::new(CODE_STYLE_ID(lang), StyleType::Paragraph)
+                    .based_on(BASE_CODE_STYLE_ID)
+                    .name(format!("Code {lang}")),
+                &settings,
+            ));
+        }
     }
+
     docx
 }
 

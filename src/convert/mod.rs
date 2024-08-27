@@ -22,7 +22,7 @@ use style::add_style;
 pub struct Args {
     /// The file to convert
     file: PathBuf,
-    /// The style file
+    /// A Toml style file
     #[clap(short, long)]
     style: Option<PathBuf>,
 }
