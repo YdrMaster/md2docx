@@ -42,12 +42,8 @@ A **B `CD` *~E~ **F`G`** H* I** ~***J***~
 
 ## 依赖项
 
-[markdown-1.0](https://crates.io/crates/markdown/1.0.0-alpha.20)
+*[markdown-1.0](https://crates.io/crates/markdown/1.0.0-alpha.20)*
 
 ## 参考资料
 
 - [多级列表格式](https://learn.microsoft.com/zh-cn/dotnet/api/documentformat.openxml.wordprocessing.numberformatvalues)
-
-## 图片
-
-![logo](md.png)

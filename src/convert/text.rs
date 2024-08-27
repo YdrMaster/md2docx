@@ -1,58 +1,14 @@
-﻿use super::{docx, md, paragraph::from_link, style::inline_code_style, Ast};
+﻿use super::{docx, md, style::inline_code_style, Ast};
 
 pub fn to_paragraph_children(children: impl IntoIterator<Item = Ast>) -> Vec<docx::ParagraphChild> {
-    type Child = docx::ParagraphChild;
-    let mut ans = Vec::new();
-    for ast in children {
-        match ast {
-            Ast::Text(text) => ans.push(Text::from(text).into_child()),
-            Ast::InlineCode(inline_code) => ans.push(Text::from(inline_code).into_child()),
-            Ast::Strong(strong) => {
-                ans.extend(from_strong(strong).into_iter().map(|t| t.into_child()))
-            }
-            Ast::Emphasis(emphasis) => {
-                ans.extend(from_emphasis(emphasis).into_iter().map(|t| t.into_child()))
-            }
-            Ast::Delete(delete) => {
-                ans.extend(from_delete(delete).into_iter().map(|t| t.into_child()))
-            }
-            Ast::Link(link) => ans.push(Child::Hyperlink(from_link(link))),
-
-            Ast::Root(_)
-            | Ast::Heading(_)
-            | Ast::BlockQuote(_)
-            | Ast::Code(_)
-            | Ast::Math(_)
-            | Ast::List(_)
-            | Ast::ListItem(_)
-            | Ast::Table(_)
-            | Ast::TableRow(_)
-            | Ast::TableCell(_) => unreachable!(),
-
-            Ast::FootnoteDefinition(_)
-            | Ast::MdxJsxFlowElement(_)
-            | Ast::MdxjsEsm(_)
-            | Ast::Toml(_)
-            | Ast::Yaml(_)
-            | Ast::Break(_)
-            | Ast::InlineMath(_)
-            | Ast::MdxTextExpression(_)
-            | Ast::FootnoteReference(_)
-            | Ast::Html(_)
-            | Ast::Image(_)
-            | Ast::ImageReference(_)
-            | Ast::MdxJsxTextElement(_)
-            | Ast::LinkReference(_)
-            | Ast::MdxFlowExpression(_)
-            | Ast::ThematicBreak(_)
-            | Ast::Definition(_)
-            | Ast::Paragraph(_) => todo!(),
-        };
-    }
-    ans
+    children
+        .into_iter()
+        .flat_map(TextAndLink::from_ast)
+        .map(TextAndLink::into_child)
+        .collect()
 }
 
-pub struct Text {
+struct Text {
     style: TextStyle,
     content: String,
 }
@@ -67,30 +23,27 @@ enum TextStyle {
 }
 
 impl Text {
-    pub fn strong(mut self) -> Self {
+    fn strong(&mut self) {
         if let TextStyle::Normal { strong, .. } = &mut self.style {
             *strong = true;
         }
-        self
     }
 
-    pub fn emphasis(mut self) -> Self {
+    fn emphasis(&mut self) {
         if let TextStyle::Normal { emphasis, .. } = &mut self.style {
             *emphasis = true;
         }
-        self
     }
 
-    pub fn delete(mut self) -> Self {
+    fn delete(&mut self) {
         if let TextStyle::Normal { delete, .. } = &mut self.style {
             *delete = true;
         }
-        self
     }
 
-    pub fn into_child(self) -> docx::ParagraphChild {
+    fn into_run(self) -> docx::Run {
         let mut run = docx::Run::new().add_text(self.content);
-        let run = match self.style {
+        match self.style {
             TextStyle::Normal {
                 strong,
                 emphasis,
@@ -108,172 +61,108 @@ impl Text {
                 run
             }
             TextStyle::InlineCode => inline_code_style(run),
-        };
-        docx::ParagraphChild::Run(Box::new(run))
-    }
-}
-
-impl From<md::Text> for Text {
-    fn from(value: md::Text) -> Self {
-        Self {
-            style: TextStyle::Normal {
-                strong: false,
-                emphasis: false,
-                delete: false,
-            },
-            content: value.value,
         }
     }
 }
 
-impl From<md::InlineCode> for Text {
-    fn from(value: md::InlineCode) -> Self {
-        Self {
-            style: TextStyle::InlineCode,
-            content: value.value,
-        }
-    }
+enum TextAndLink {
+    Text(Text),
+    Link { text: Vec<Text>, url: String },
 }
 
-pub fn from_strong(strong: md::Strong) -> Vec<Text> {
-    let mut ans = Vec::new();
-    for node in strong.children {
-        match node {
-            Ast::Text(text) => ans.push(Text::from(text).strong()),
-            Ast::InlineCode(inline_code) => ans.push(Text::from(inline_code).strong()),
-            Ast::Emphasis(emphasis) => {
-                ans.extend(from_emphasis(emphasis).into_iter().map(|t| t.strong()))
+impl TextAndLink {
+    fn strong(mut self) -> Self {
+        match &mut self {
+            Self::Text(t) => t.strong(),
+            Self::Link { text, .. } => {
+                for t in text {
+                    t.strong()
+                }
             }
-            Ast::Delete(delete) => ans.extend(from_delete(delete).into_iter().map(|t| t.strong())),
+        }
+        self
+    }
 
-            Ast::Strong(_)
-            | Ast::Root(_)
-            | Ast::ThematicBreak(_)
-            | Ast::Code(_)
-            | Ast::Math(_)
-            | Ast::Image(_)
-            | Ast::ImageReference(_)
-            | Ast::Heading(_)
-            | Ast::Table(_)
-            | Ast::TableRow(_)
-            | Ast::TableCell(_) => unreachable!(),
+    fn emphasis(mut self) -> Self {
+        match &mut self {
+            Self::Text(t) => t.emphasis(),
+            Self::Link { text, .. } => {
+                for t in text {
+                    t.emphasis()
+                }
+            }
+        }
+        self
+    }
 
-            Ast::BlockQuote(_)
-            | Ast::FootnoteDefinition(_)
-            | Ast::MdxJsxFlowElement(_)
-            | Ast::List(_)
-            | Ast::MdxjsEsm(_)
-            | Ast::Toml(_)
-            | Ast::Yaml(_)
-            | Ast::Break(_)
-            | Ast::InlineMath(_)
-            | Ast::MdxTextExpression(_)
-            | Ast::FootnoteReference(_)
-            | Ast::Html(_)
-            | Ast::MdxJsxTextElement(_)
-            | Ast::Link(_)
-            | Ast::LinkReference(_)
-            | Ast::MdxFlowExpression(_)
-            | Ast::ListItem(_)
-            | Ast::Definition(_)
-            | Ast::Paragraph(_) => todo!(),
+    fn delete(mut self) -> Self {
+        match &mut self {
+            Self::Text(t) => t.delete(),
+            Self::Link { text, .. } => {
+                for t in text {
+                    t.delete()
+                }
+            }
+        }
+        self
+    }
+
+    fn from_ast(ast: Ast) -> Vec<Self> {
+        match ast {
+            Ast::Text(md::Text { value, .. }) => vec![Self::Text(Text {
+                style: TextStyle::Normal {
+                    strong: false,
+                    emphasis: false,
+                    delete: false,
+                },
+                content: value,
+            })],
+            Ast::InlineCode(md::InlineCode { value, .. }) => vec![Self::Text(Text {
+                style: TextStyle::InlineCode,
+                content: value,
+            })],
+            Ast::Link(md::Link { children, url, .. }) => vec![Self::Link {
+                text: children
+                    .into_iter()
+                    .flat_map(Self::from_ast)
+                    .map(|it| {
+                        let Self::Text(text) = it else { unreachable!() };
+                        text
+                    })
+                    .collect(),
+                url,
+            }],
+
+            Ast::Strong(md::Strong { children, .. }) => children
+                .into_iter()
+                .flat_map(Self::from_ast)
+                .map(TextAndLink::strong)
+                .collect(),
+            Ast::Emphasis(md::Emphasis { children, .. }) => children
+                .into_iter()
+                .flat_map(Self::from_ast)
+                .map(TextAndLink::emphasis)
+                .collect(),
+            Ast::Delete(md::Delete { children, .. }) => children
+                .into_iter()
+                .flat_map(Self::from_ast)
+                .map(TextAndLink::delete)
+                .collect(),
+
+            _ => todo!(),
         }
     }
-    ans
-}
 
-pub fn from_emphasis(strong: md::Emphasis) -> Vec<Text> {
-    let mut ans = Vec::new();
-    for node in strong.children {
-        match node {
-            Ast::Text(text) => ans.push(Text::from(text).emphasis()),
-            Ast::InlineCode(inline_code) => ans.push(Text::from(inline_code).emphasis()),
-            Ast::Strong(strong) => {
-                ans.extend(from_strong(strong).into_iter().map(|t| t.emphasis()))
+    fn into_child(self) -> docx::ParagraphChild {
+        match self {
+            Self::Text(text) => docx::ParagraphChild::Run(Box::new(text.into_run())),
+            Self::Link { text, url } => {
+                let mut hyperlink = docx::Hyperlink::new(url, docx_rs::HyperlinkType::External);
+                for text in text {
+                    hyperlink = hyperlink.add_run(text.into_run());
+                }
+                docx::ParagraphChild::Hyperlink(hyperlink)
             }
-            Ast::Delete(delete) => {
-                ans.extend(from_delete(delete).into_iter().map(|t| t.emphasis()))
-            }
-
-            Ast::Emphasis(_)
-            | Ast::Root(_)
-            | Ast::ThematicBreak(_)
-            | Ast::Code(_)
-            | Ast::Math(_)
-            | Ast::Image(_)
-            | Ast::ImageReference(_)
-            | Ast::Heading(_)
-            | Ast::Table(_)
-            | Ast::TableRow(_)
-            | Ast::TableCell(_) => unreachable!(),
-
-            Ast::BlockQuote(_)
-            | Ast::FootnoteDefinition(_)
-            | Ast::MdxJsxFlowElement(_)
-            | Ast::List(_)
-            | Ast::MdxjsEsm(_)
-            | Ast::Toml(_)
-            | Ast::Yaml(_)
-            | Ast::Break(_)
-            | Ast::InlineMath(_)
-            | Ast::MdxTextExpression(_)
-            | Ast::FootnoteReference(_)
-            | Ast::Html(_)
-            | Ast::MdxJsxTextElement(_)
-            | Ast::Link(_)
-            | Ast::LinkReference(_)
-            | Ast::MdxFlowExpression(_)
-            | Ast::ListItem(_)
-            | Ast::Definition(_)
-            | Ast::Paragraph(_) => todo!(),
         }
     }
-    ans
-}
-
-pub fn from_delete(delete: md::Delete) -> Vec<Text> {
-    let mut ans = Vec::new();
-    for node in delete.children {
-        match node {
-            Ast::Text(text) => ans.push(Text::from(text).delete()),
-            Ast::InlineCode(inline_code) => ans.push(Text::from(inline_code).delete()),
-            Ast::Strong(strong) => ans.extend(from_strong(strong).into_iter().map(|t| t.delete())),
-            Ast::Emphasis(emphasis) => {
-                ans.extend(from_emphasis(emphasis).into_iter().map(|t| t.delete()))
-            }
-
-            Ast::Delete(_)
-            | Ast::Root(_)
-            | Ast::ThematicBreak(_)
-            | Ast::Code(_)
-            | Ast::Math(_)
-            | Ast::Image(_)
-            | Ast::ImageReference(_)
-            | Ast::Heading(_)
-            | Ast::Table(_)
-            | Ast::TableRow(_)
-            | Ast::TableCell(_) => unreachable!(),
-
-            Ast::BlockQuote(_)
-            | Ast::FootnoteDefinition(_)
-            | Ast::MdxJsxFlowElement(_)
-            | Ast::List(_)
-            | Ast::MdxjsEsm(_)
-            | Ast::Toml(_)
-            | Ast::Yaml(_)
-            | Ast::Break(_)
-            | Ast::InlineMath(_)
-            | Ast::MdxTextExpression(_)
-            | Ast::FootnoteReference(_)
-            | Ast::Html(_)
-            | Ast::MdxJsxTextElement(_)
-            | Ast::Link(_)
-            | Ast::LinkReference(_)
-            | Ast::MdxFlowExpression(_)
-            | Ast::ListItem(_)
-            | Ast::Definition(_)
-            | Ast::Paragraph(_) => todo!(),
-        }
-    }
-    ans
 }

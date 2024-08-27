@@ -29,9 +29,3 @@ pub fn from_paragraph(md::Paragraph { children, .. }: md::Paragraph) -> docx::Pa
     p.children.extend(to_paragraph_children(children));
     body_text_style(p)
 }
-
-pub fn from_link(md::Link { children, url, .. }: md::Link) -> docx::Hyperlink {
-    let mut h = docx::Hyperlink::new(url, docx::HyperlinkType::External);
-    h.children.extend(to_paragraph_children(children));
-    h
-}
